@@ -11,7 +11,7 @@
 #include <transmission_interface/simple_transmission.h>
 #include <transmission_interface/transmission_interface.h>
 
-#include <dynamixel_workbench_toolbox/dynamixel_multi_driver.h>
+#include <dynamixel_workbench/dynamixel_driver.h>
 
 namespace dynamixel_workbench_ros_control
 {
@@ -68,9 +68,14 @@ private:
   void setTorque(bool enabled);
   void setTorque(std_msgs::BoolConstPtr enabled);
 
+  bool syncWriteTorqueEnable(bool torque);
+  bool syncReadPositions();
+  bool syncReadVelocities(std::vector<double> velocities);
+  bool syncReadEfforts(std::vector<double> efforts);
+
   bool first_cycle_;
 
-  boost::shared_ptr<dynamixel_multi_driver::DynamixelMultiDriver> driver_;
+  boost::shared_ptr<DynamixelDriver> driver_;
 
   hardware_interface::JointStateInterface jnt_state_interface_;
 
@@ -83,6 +88,7 @@ private:
   int joint_count_;
 
   std::vector<std::string> joint_names_;
+  std::vector<uint8_t> joint_ids_;
   std::vector<double> joint_mounting_offsets_;
   std::vector<double> joint_offsets_;
 

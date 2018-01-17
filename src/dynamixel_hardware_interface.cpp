@@ -4,11 +4,12 @@ namespace dynamixel_workbench_ros_control
 {
 
 DynamixelHardwareInterface::DynamixelHardwareInterface()
-  : first_cycle_(true), read_position_(true), read_velocity_(false), read_effort_(false)
+  : first_cycle_(true), read_position_(true), read_velocity_(false), read_effort_(true),driver_(new DynamixelDriver())
 {}
 
 bool DynamixelHardwareInterface::init(ros::NodeHandle& nh)
 {
+
   // Init subscriber
   set_torque_sub_ = nh.subscribe<std_msgs::BoolConstPtr>("set_torque", 1, &DynamixelHardwareInterface::setTorque, this);
 
@@ -19,12 +20,8 @@ bool DynamixelHardwareInterface::init(ros::NodeHandle& nh)
     return false;
   }
 
-  // Initialize sync read/write
-  driver_->initSyncRead();
-  driver_->initSyncWrite();
-
   // Switch dynamixels to correct control mode (position, velocity, effort)
-  switchDynamixelControlMode();
+  //switchDynamixelControlMode();
 
   joint_count_ = joint_names_.size();
   current_position_.resize(joint_count_, 0);
@@ -33,7 +30,6 @@ bool DynamixelHardwareInterface::init(ros::NodeHandle& nh)
   goal_position_.resize(joint_count_, 0);
   goal_velocity_.resize(joint_count_, 0);
   goal_effort_.resize(joint_count_, 0);
-
   // register interfaces
   for (unsigned int i = 0; i < joint_names_.size(); i++)
   {
@@ -61,8 +57,8 @@ bool DynamixelHardwareInterface::init(ros::NodeHandle& nh)
   {
     registerInterface(&jnt_eff_interface_);
   }
-
   setTorque(nh.param("auto_torque", false));
+  ROS_WARN("init finished");
   return true;
 }
 
@@ -92,13 +88,12 @@ bool DynamixelHardwareInterface::loadDynamixels(ros::NodeHandle& nh)
   nh.getParam("dynamixels/port_info/baudrate", baudrate);
   float protocol_version;
   nh.getParam("dynamixels/port_info/protocol_version", protocol_version);
-  driver_.reset(new dynamixel_multi_driver::DynamixelMultiDriver(port_name, baudrate, protocol_version));
+  driver_->init(port_name.c_str(), uint32_t(baudrate));
 
-  // get dxl info
-  std::vector<dynamixel_driver::DynamixelInfo*> infos;
   XmlRpc::XmlRpcValue dxls;
   nh.getParam("dynamixels/device_info", dxls);
   ROS_ASSERT(dxls.getType() == XmlRpc::XmlRpcValue::TypeStruct);
+  int i = 0;
   for(XmlRpc::XmlRpcValue::ValueStruct::const_iterator it = dxls.begin(); it != dxls.end(); ++it)
   {
     std::string dxl_name = (std::string)(it->first);
@@ -108,25 +103,38 @@ bool DynamixelHardwareInterface::loadDynamixels(ros::NodeHandle& nh)
     joint_mounting_offsets_.push_back(dxl_nh.param("mounting_offset", 0.0));
     joint_offsets_.push_back(dxl_nh.param("offset", 0.0));
 
-    dynamixel_driver::DynamixelInfo * info = new dynamixel_driver::DynamixelInfo;
-
-    int model_id;
-    dxl_nh.getParam("id", model_id);
-    info->model_id = model_id;
+    int motor_id;
+    dxl_nh.getParam("id", motor_id);
 
     int model_number;
     dxl_nh.getParam("model_number", model_number);
-    info->model_number = model_number;
-    infos.push_back(info);
+    uint16_t model_number_16 = uint16_t(model_number);
+    uint16_t* model_number_16p = &model_number_16;
+
+    //ping it to very that it's there and to add it to the driver
+    if(!driver_->ping(uint8_t(motor_id), model_number_16p)){
+      ROS_ERROR("Was not able to ping motor with id %d", motor_id);
+      success = false;
+    }
+    joint_ids_.push_back(uint8_t(motor_id));
+    i++;
+  }
+  if(!success){
+    return false;
   }
 
-  // load into driver and clean up
-  success &= driver_->loadDynamixel(infos);
+  driver_->setPacketHandler(protocol_version);
+  driver_->addSyncWrite("Torque_Enable");
+  driver_->addSyncWrite("Goal_Position");
+  driver_->addSyncWrite("Goal_Velocity");
+  driver_->addSyncWrite("Goal_Current");
+  driver_->addSyncRead("Present_Current");
+  driver_->addSyncRead("Present_Velocity");
+  driver_->addSyncRead("Present_Position");
 
-  for (unsigned int i = 0; i < infos.size(); i++)
-  {
-    delete infos[i];
-  }
+
+
+
 
   return success;
 }
@@ -134,7 +142,7 @@ bool DynamixelHardwareInterface::loadDynamixels(ros::NodeHandle& nh)
 void DynamixelHardwareInterface::setTorque(bool enabled)
 {
   std::vector<uint8_t> torque(joint_names_.size(), enabled);
-  driver_->syncWriteTorque(torque);
+  //syncWriteTorque(torque);
 }
 
 void DynamixelHardwareInterface::setTorque(std_msgs::BoolConstPtr enabled)
@@ -146,7 +154,7 @@ void DynamixelHardwareInterface::read()
 {
   if (read_position_)
   {
-    if (driver_->syncReadPosition(current_position_))
+    if (syncReadPositions())
     {
       for (size_t num = 0; num < joint_names_.size(); num++)
         current_position_[num] += joint_mounting_offsets_[num] + joint_offsets_[num];
@@ -157,14 +165,15 @@ void DynamixelHardwareInterface::read()
 
   if (read_velocity_)
   {
-    if (!driver_->syncReadVelocity(current_velocity_))
+    if (!syncReadVelocities(current_velocity_))
     {
       ROS_ERROR_THROTTLE(1.0, "Couldn't read current joint velocity!");
     }
   }
 
-  if (read_effort_) {
-    if (!driver_->syncReadEffort(current_effort_))
+  if (read_effort_)
+  {
+    if (!syncReadEfforts(current_effort_))
     {
       ROS_ERROR_THROTTLE(1.0, "Couldn't read current joint effort!");
     }
@@ -181,16 +190,17 @@ void DynamixelHardwareInterface::write()
 {
   if (control_mode_ == PositionControl)
   {
+
     std::vector<double> goal_position(joint_names_.size());
     for (size_t num = 0; num < joint_names_.size(); num++)
       goal_position[num] = goal_position_[num] - joint_mounting_offsets_[num] - joint_offsets_[num];
-    driver_->syncWritePosition(goal_position);
+    //driver_->syncWritePosition(goal_position);
   } else if (control_mode_ == VelocityControl)
   {
-    driver_->syncWriteVelocity(goal_velocity_);
+    //driver_->syncWriteVelocity(goal_velocity_);
   } else if (control_mode_ == EffortControl)
   {
-    driver_->syncWriteCurrent(goal_effort_);
+    //driver_->syncWriteCurrent(goal_effort_);
   }
 }
 
@@ -215,19 +225,73 @@ bool DynamixelHardwareInterface::stringToControlMode(std::string control_mode_st
 
 bool DynamixelHardwareInterface::switchDynamixelControlMode()
 {
-  uint32_t value = dynamixel_driver::OPERATING_MODE_POSITION_CONTROL;
+  // Torque on dynamixels has to be disabled to change operating mode
+  setTorque(false);
+  ros::Duration(0.5).sleep();
+
+  int32_t value = 3;
   if (control_mode_ == PositionControl)
   {
-    value = dynamixel_driver::OPERATING_MODE_POSITION_CONTROL;;
+    value = 3;;
   } else if (control_mode_ == VelocityControl)
   {
-    value = dynamixel_driver::OPERATING_MODE_VELOCITY_CONTROL;
+    value = 1;
   } else if (control_mode_ == EffortControl)
   {
-    value = dynamixel_driver::OPERATING_MODE_CURRENT_CONTROL;
+    value = 0;
   }
 
-  driver_->writeMultiRegister("operating_mode", value);
+  std::vector<uint8_t> operating_mode(joint_names_.size(), value);
+
+  //driver_->syncWriteOperating(operating_mode);
+
+  ros::Duration(0.5).sleep();
+  //reenable torque
+  setTorque(true);
+
+}
+
+bool DynamixelHardwareInterface::syncWriteTorqueEnable(bool torque) {
+  int32_t torque32 = int32_t(torque);
+  //return driver_->syncWrite("Torque_Enable", &torque32);
+  return true;
+}
+
+bool DynamixelHardwareInterface::syncReadPositions(){
+//ROS_WARN("reading positions");
+  bool success;
+  int32_t *data = (int32_t *) malloc(joint_count_ * sizeof(int32_t));
+  success = driver_->syncRead("Present_Position", data);
+  for(int i = 0; i < joint_count_; i++){
+    current_position_[i] = driver_->convertValue2Radian(joint_ids_[i], data[i]);
+  }
+
+  free(data);
+  return success;
+}
+
+bool DynamixelHardwareInterface::syncReadVelocities(std::vector<double> velocities){
+  bool success;
+  int32_t *data = (int32_t *) malloc(joint_count_ * sizeof(int32_t));
+  success = driver_->syncRead("Present_Velocity", data);
+  for(int i = 0; i < joint_count_; i++){
+    current_velocity_[i] = driver_->convertValue2Velocity(joint_ids_[i], data[i]);
+  }
+  free(data);
+
+  return success;
+}
+
+bool DynamixelHardwareInterface::syncReadEfforts(std::vector<double> efforts) {
+  bool success;
+  int32_t *data = (int32_t *) malloc(joint_count_ * sizeof(int32_t));
+  success = driver_->syncRead("Present_Current", data);
+  for (int i = 0; i < joint_count_; i++) {
+    current_effort_[i] = driver_->convertValue2Torque(joint_ids_[i], data[i]);
+  }
+  free(data);
+
+  return success;
 }
 
 }

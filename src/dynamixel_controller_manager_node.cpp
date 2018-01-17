@@ -27,6 +27,7 @@ int main(int argc, char** argv)
   ros::Time current_time = ros::Time::now();
   bool first_update = true;
   ros::Rate rate(pnh.param("control_loop_hz", 25));
+
   while (ros::ok())
   {
     hw.read();
