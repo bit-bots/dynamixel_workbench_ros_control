@@ -1,4 +1,6 @@
 #include <dynamixel_workbench_ros_control/dynamixel_hardware_interface.h>
+#define DXL_MAKEWORD(a, b)  ((uint16_t)(((uint8_t)(((uint64_t)(a)) & 0xff)) | ((uint16_t)((uint8_t)(((uint64_t)(b)) & 0xff))) << 8))
+#define DXL_MAKEDWORD(a, b) ((uint32_t)(((uint16_t)(((uint64_t)(a)) & 0xffff)) | ((uint32_t)((uint16_t)(((uint64_t)(b)) & 0xffff))) << 16))
 
 namespace dynamixel_workbench_ros_control
 {
@@ -152,30 +154,31 @@ void DynamixelHardwareInterface::setTorque(std_msgs::BoolConstPtr enabled)
 
 void DynamixelHardwareInterface::read()
 {
-  if (read_position_)
-  {
-    if (syncReadPositions())
-    {
+  if (read_position_ && read_velocity_ && read_effort_ ){
+    if(syncReadAll()){
       for (size_t num = 0; num < joint_names_.size(); num++)
         current_position_[num] += joint_mounting_offsets_[num] + joint_offsets_[num];
+    } else
+      ROS_ERROR_THROTTLE(1.0, "Couldn't read all current joint values!");
+  }else {
+    if (read_position_) {
+      if (syncReadPositions()) {
+        for (size_t num = 0; num < joint_names_.size(); num++)
+          current_position_[num] += joint_mounting_offsets_[num] + joint_offsets_[num];
+      } else
+        ROS_ERROR_THROTTLE(1.0, "Couldn't read current joint position!");
     }
-    else
-      ROS_ERROR_THROTTLE(1.0, "Couldn't read current joint position!");
-  }
 
-  if (read_velocity_)
-  {
-    if (!syncReadVelocities(current_velocity_))
-    {
-      ROS_ERROR_THROTTLE(1.0, "Couldn't read current joint velocity!");
+    if (read_velocity_) {
+      if (!syncReadVelocities()) {
+        ROS_ERROR_THROTTLE(1.0, "Couldn't read current joint velocity!");
+      }
     }
-  }
 
-  if (read_effort_)
-  {
-    if (!syncReadEfforts(current_effort_))
-    {
-      ROS_ERROR_THROTTLE(1.0, "Couldn't read current joint effort!");
+    if (read_effort_) {
+      if (!syncReadEfforts()) {
+        ROS_ERROR_THROTTLE(1.0, "Couldn't read current joint effort!");
+      }
     }
   }
 
@@ -270,7 +273,7 @@ bool DynamixelHardwareInterface::syncReadPositions(){
   return success;
 }
 
-bool DynamixelHardwareInterface::syncReadVelocities(std::vector<double> velocities){
+bool DynamixelHardwareInterface::syncReadVelocities(){
   bool success;
   int32_t *data = (int32_t *) malloc(joint_count_ * sizeof(int32_t));
   success = driver_->syncRead("Present_Velocity", data);
@@ -282,7 +285,7 @@ bool DynamixelHardwareInterface::syncReadVelocities(std::vector<double> velociti
   return success;
 }
 
-bool DynamixelHardwareInterface::syncReadEfforts(std::vector<double> efforts) {
+bool DynamixelHardwareInterface::syncReadEfforts() {
   bool success;
   int32_t *data = (int32_t *) malloc(joint_count_ * sizeof(int32_t));
   success = driver_->syncRead("Present_Current", data);
@@ -292,6 +295,32 @@ bool DynamixelHardwareInterface::syncReadEfforts(std::vector<double> efforts) {
   free(data);
 
   return success;
+}
+
+bool DynamixelHardwareInterface::syncReadAll() {
+  bool success;
+  std::vector<uint8_t> data;
+  if(driver_->syncReadMultipleRegisters(126, 10, &data)) {
+    uint32_t eff;
+    uint32_t vel;
+    uint32_t pos;
+    for (int i = 0; i < joint_count_; i++) {
+      eff = DXL_MAKEWORD(data[i * 10], data[i * 10 + 1]);
+      vel = DXL_MAKEDWORD(DXL_MAKEWORD(data[i * 10 + 2], data[i * 10 + 3]),
+                          DXL_MAKEWORD(data[i * 10 + 4], data[i * 10 + 5]));
+      pos = DXL_MAKEDWORD(DXL_MAKEWORD(data[i * 10 + 6], data[i * 10 + 7]),
+                          DXL_MAKEWORD(data[i * 10 + 8], data[i * 10 + 9]));
+      //ROS_WARN("pos: %d", pos);
+      current_effort_[i] = driver_->convertValue2Torque(joint_ids_[i], eff);
+      current_velocity_[i] = driver_->convertValue2Velocity(joint_ids_[i], vel);
+      current_position_[i] = driver_->convertValue2Radian(joint_ids_[i], pos);
+    }
+    return true;
+  }else{
+    return false;
+  }
+
+
 }
 
 }

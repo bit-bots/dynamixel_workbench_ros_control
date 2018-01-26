@@ -70,8 +70,9 @@ private:
 
   bool syncWriteTorqueEnable(bool torque);
   bool syncReadPositions();
-  bool syncReadVelocities(std::vector<double> velocities);
-  bool syncReadEfforts(std::vector<double> efforts);
+  bool syncReadVelocities();
+  bool syncReadEfforts();
+  bool syncReadAll();
 
   bool first_cycle_;
 
