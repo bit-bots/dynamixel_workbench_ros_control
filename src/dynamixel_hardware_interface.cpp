@@ -60,7 +60,31 @@ bool DynamixelHardwareInterface::init(ros::NodeHandle& nh)
     registerInterface(&jnt_eff_interface_);
   }
   setTorque(nh.param("auto_torque", false));
-  ROS_WARN("init finished");
+
+  // alloc memory for imu values
+  orientation_ = (double*) malloc(4 * sizeof(double));
+  std::fill(orientation_, orientation_+4, 0);
+  orientation_covariance_ = (double*) malloc(9 * sizeof(double));
+  std::fill(orientation_covariance_, orientation_covariance_+9, 0);
+  angular_velocity_ = (double*) malloc(3 * sizeof(double));
+  std::fill(angular_velocity_, angular_velocity_+3, 0);
+  angular_velocity_covariance_ = (double*) malloc(9 * sizeof(double));
+  std::fill(angular_velocity_covariance_, angular_velocity_covariance_+9, 0);
+  linear_acceleration_ = (double*) malloc(3 * sizeof(double));
+  std::fill(linear_acceleration_, linear_acceleration_+3, 0);
+  linear_acceleration_covariance_ = (double*) malloc(9 * sizeof(double));
+  std::fill(linear_acceleration_covariance_, linear_acceleration_covariance_+9, 0);
+
+  std::string imu_name;
+  std::string imu_frame;
+  nh.getParam("IMU/name", imu_name);
+  nh.getParam("IMU/frame", imu_frame);
+  nh.getParam("IMU/read", read_imu_);
+  hardware_interface::ImuSensorHandle imu_handle(imu_name, imu_frame, orientation_, orientation_covariance_, angular_velocity_, angular_velocity_covariance_, linear_acceleration_, linear_acceleration_covariance_);
+  imu_interface_.registerHandle(imu_handle);
+  registerInterface(&imu_interface_);
+
+  ROS_INFO("Hardware interface init finished.");
   return true;
 }
 
@@ -186,6 +210,12 @@ void DynamixelHardwareInterface::read()
   {
     goal_position_ = current_position_;
     first_cycle_ = false;
+  }
+
+  if(read_imu_){
+      if(!readImu()){
+          ROS_ERROR_THROTTLE(1.0, "Couldn't read IMU");
+      }
   }
 }
 
@@ -319,7 +349,41 @@ bool DynamixelHardwareInterface::syncReadAll() {
   }else{
     return false;
   }
+}
 
+bool DynamixelHardwareInterface::readImu(){
+    bool success;
+    uint8_t *data = (uint8_t *) malloc(110 * sizeof(uint8_t));
+    //std::vector<uint8_t> data_points;
+
+    if(driver_->readMultipleRegisters(241, 36, 110, data)){
+        //todo give posibility to use the mean value
+        uint32_t highest_seq_number = 0;
+        uint32_t new_value_index=0;
+        uint32_t current_seq_number= 0;
+        // imu gives us 5 values at the same time, lets see which one is the newest
+        for(int i =0; i < 5; i++){
+            //the sequence number are the bytes 18 to 22 for each of the five 22 Bytes
+            current_seq_number = DXL_MAKEDWORD(DXL_MAKEWORD(data[22*i+18], data[22*i+19]),
+                                             DXL_MAKEWORD(data[22*i+20], data[22*i+21]));
+          if(current_seq_number>highest_seq_number){
+              highest_seq_number=current_seq_number;
+              new_value_index=i;
+            }
+        }
+      // linear acceleration are two signed bytes with 256 LSB per g
+      linear_acceleration_[0] = ((short) DXL_MAKEWORD(data[22*new_value_index], data[22*new_value_index+1])) / 256.0 ;
+      linear_acceleration_[1] = ((short) DXL_MAKEWORD(data[22*new_value_index+2], data[22*new_value_index+3])) / 256.0 ;
+      linear_acceleration_[2] = ((short)DXL_MAKEWORD(data[22*new_value_index+4], data[22*new_value_index+5])) / 256.0 ;
+      // angular velocity are two signed bytes with 14.375 per deg/s
+      angular_velocity_[0] = ((short)DXL_MAKEWORD(data[22*new_value_index+6], data[22*new_value_index+7])) / 14.375;
+      angular_velocity_[1] = ((short)DXL_MAKEWORD(data[22*new_value_index+8], data[22*new_value_index+9])) / 14.375;
+      angular_velocity_[2] = ((short)DXL_MAKEWORD(data[22*new_value_index+10], data[22*new_value_index+11])) / 14.375;
+
+      return true;
+    }else {
+      return false;
+    }
 
 }
 

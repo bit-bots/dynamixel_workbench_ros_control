@@ -5,6 +5,7 @@
 
 #include <std_msgs/Bool.h>
 
+#include <hardware_interface/imu_sensor_interface.h>
 #include <hardware_interface/joint_command_interface.h>
 #include <hardware_interface/joint_state_interface.h>
 #include <hardware_interface/robot_hw.h>
@@ -73,6 +74,7 @@ private:
   bool syncReadVelocities();
   bool syncReadEfforts();
   bool syncReadAll();
+  bool readImu();
 
   bool first_cycle_;
 
@@ -83,6 +85,8 @@ private:
   hardware_interface::PositionJointInterface jnt_pos_interface_;
   hardware_interface::VelocityJointInterface jnt_vel_interface_;
   hardware_interface::EffortJointInterface jnt_eff_interface_;
+
+  hardware_interface::ImuSensorInterface imu_interface_;
 
   ControlMode control_mode_;
 
@@ -103,6 +107,14 @@ private:
   std::vector<double> current_position_;
   std::vector<double> current_velocity_;
   std::vector<double> current_effort_;
+
+  bool read_imu_;
+   double* orientation_; //quaternion (x,y,z,w)
+   double* orientation_covariance_;
+  double* angular_velocity_;
+   double* angular_velocity_covariance_;
+    double* linear_acceleration_;
+   double* linear_acceleration_covariance_;
 
   // subscriber
   ros::Subscriber set_torque_sub_;

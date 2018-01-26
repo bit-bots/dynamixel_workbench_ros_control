@@ -1,8 +1,16 @@
 <?xml version="1.0"?>
 <launch>
   <node pkg="dynamixel_workbench_ros_control" type="dynamixel_controller_manager_node" name="gripper_control" output="screen">
-    <param name="control_cycle_hz" value="25" />
+    <param name="control_loop_hz" value="1000" />
     
-    <rosparam file="$(find dynamixel_workbench_ros_control)/config/gripper.yaml" command="load" />
+    <rosparam file="$(find dynamixel_workbench_ros_control)/config/gripper2.yaml" command="load" />
+  </node>
+
+      <param name="robot_description" textfile="$(find minibot_description)/urdf/minibot.urdf" />
+
+    <rosparam file="$(find dynamixel_workbench_ros_control)/config/controller.yaml" command="load"/>
+
+  <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+      output="screen" args="joint_state_controller imu_sensor_controller TestController">
   </node>
 </launch>
