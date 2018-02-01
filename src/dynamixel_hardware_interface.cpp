@@ -23,7 +23,7 @@ bool DynamixelHardwareInterface::init(ros::NodeHandle& nh)
   }
 
   // Switch dynamixels to correct control mode (position, velocity, effort)
-  //switchDynamixelControlMode();
+  switchDynamixelControlMode();
 
   joint_count_ = joint_names_.size();
   current_position_.resize(joint_count_, 0);
@@ -154,26 +154,26 @@ bool DynamixelHardwareInterface::loadDynamixels(ros::NodeHandle& nh)
   driver_->addSyncWrite("Goal_Position");
   driver_->addSyncWrite("Goal_Velocity");
   driver_->addSyncWrite("Goal_Current");
+  driver_->addSyncWrite("Operating_Mode");
   driver_->addSyncRead("Present_Current");
   driver_->addSyncRead("Present_Velocity");
   driver_->addSyncRead("Present_Position");
-
-
-
-
 
   return success;
 }
 
 void DynamixelHardwareInterface::setTorque(bool enabled)
 {
-  std::vector<uint8_t> torque(joint_names_.size(), enabled);
-  //syncWriteTorque(torque);
+  std::vector<int32_t> torque(joint_names_.size(), enabled);
+  int32_t* t = &torque[0];
+  driver_->syncWrite("Torque_Enable", t);
+  current_torque_ = enabled;
 }
 
 void DynamixelHardwareInterface::setTorque(std_msgs::BoolConstPtr enabled)
 {
-  setTorque(enabled->data);
+  // we save the goal torque value. It will be set during write process
+  goal_torque_ = enabled->data;
 }
 
 void DynamixelHardwareInterface::read()
@@ -221,19 +221,20 @@ void DynamixelHardwareInterface::read()
 
 void DynamixelHardwareInterface::write()
 {
+  //check if we have to switch the torque
+  if(current_torque_ != goal_torque_){
+    setTorque(goal_torque_);
+  }
+
   if (control_mode_ == PositionControl)
   {
-
-    std::vector<double> goal_position(joint_names_.size());
-    for (size_t num = 0; num < joint_names_.size(); num++)
-      goal_position[num] = goal_position_[num] - joint_mounting_offsets_[num] - joint_offsets_[num];
-    //driver_->syncWritePosition(goal_position);
+      syncWritePosition();
   } else if (control_mode_ == VelocityControl)
   {
-    //driver_->syncWriteVelocity(goal_velocity_);
+      syncWriteVelocity();
   } else if (control_mode_ == EffortControl)
   {
-    //driver_->syncWriteCurrent(goal_effort_);
+      syncWriteCurrent();
   }
 }
 
@@ -274,24 +275,16 @@ bool DynamixelHardwareInterface::switchDynamixelControlMode()
     value = 0;
   }
 
-  std::vector<uint8_t> operating_mode(joint_names_.size(), value);
-
-  //driver_->syncWriteOperating(operating_mode);
+  std::vector<int32_t> operating_mode(joint_names_.size(), value);
+  int32_t* o = &operating_mode[0];
+  driver_->syncWrite("Operating_Mode", o);
 
   ros::Duration(0.5).sleep();
   //reenable torque
   setTorque(true);
-
-}
-
-bool DynamixelHardwareInterface::syncWriteTorqueEnable(bool torque) {
-  int32_t torque32 = int32_t(torque);
-  //return driver_->syncWrite("Torque_Enable", &torque32);
-  return true;
 }
 
 bool DynamixelHardwareInterface::syncReadPositions(){
-//ROS_WARN("reading positions");
   bool success;
   int32_t *data = (int32_t *) malloc(joint_count_ * sizeof(int32_t));
   success = driver_->syncRead("Present_Position", data);
@@ -340,7 +333,6 @@ bool DynamixelHardwareInterface::syncReadAll() {
                           DXL_MAKEWORD(data[i * 10 + 4], data[i * 10 + 5]));
       pos = DXL_MAKEDWORD(DXL_MAKEWORD(data[i * 10 + 6], data[i * 10 + 7]),
                           DXL_MAKEWORD(data[i * 10 + 8], data[i * 10 + 9]));
-      //ROS_WARN("pos: %d", pos);
       current_effort_[i] = driver_->convertValue2Torque(joint_ids_[i], eff);
       current_velocity_[i] = driver_->convertValue2Velocity(joint_ids_[i], vel);
       current_position_[i] = driver_->convertValue2Radian(joint_ids_[i], pos);
@@ -354,37 +346,65 @@ bool DynamixelHardwareInterface::syncReadAll() {
 bool DynamixelHardwareInterface::readImu(){
     bool success;
     uint8_t *data = (uint8_t *) malloc(110 * sizeof(uint8_t));
-    //std::vector<uint8_t> data_points;
 
-    if(driver_->readMultipleRegisters(241, 36, 110, data)){
-        //todo give posibility to use the mean value
+    if(driver_->readMultipleRegisters(241, 36, 16, data)){
+      //todo we have to check if we jumped one sequence number
         uint32_t highest_seq_number = 0;
         uint32_t new_value_index=0;
         uint32_t current_seq_number= 0;
-        // imu gives us 5 values at the same time, lets see which one is the newest
-        for(int i =0; i < 5; i++){
-            //the sequence number are the bytes 18 to 22 for each of the five 22 Bytes
-            current_seq_number = DXL_MAKEDWORD(DXL_MAKEWORD(data[22*i+18], data[22*i+19]),
-                                             DXL_MAKEWORD(data[22*i+20], data[22*i+21]));
+        // imu gives us 2 values at the same time, lets see which one is the newest
+        for(int i =0; i < 2; i++){
+            //the sequence number are the bytes 12 to 15 for each of the two 16 Bytes
+            current_seq_number = DXL_MAKEDWORD(DXL_MAKEWORD(data[16*i+12], data[16*i+13]),
+                                             DXL_MAKEWORD(data[16*i+14], data[16*i+15]));
           if(current_seq_number>highest_seq_number){
               highest_seq_number=current_seq_number;
               new_value_index=i;
             }
         }
       // linear acceleration are two signed bytes with 256 LSB per g
-      linear_acceleration_[0] = ((short) DXL_MAKEWORD(data[22*new_value_index], data[22*new_value_index+1])) / 256.0 ;
-      linear_acceleration_[1] = ((short) DXL_MAKEWORD(data[22*new_value_index+2], data[22*new_value_index+3])) / 256.0 ;
-      linear_acceleration_[2] = ((short)DXL_MAKEWORD(data[22*new_value_index+4], data[22*new_value_index+5])) / 256.0 ;
+      linear_acceleration_[0] = ((short) DXL_MAKEWORD(data[16*new_value_index], data[16*new_value_index+1])) / 256.0 ;
+      linear_acceleration_[1] = ((short) DXL_MAKEWORD(data[16*new_value_index+2], data[16*new_value_index+3])) / 256.0 ;
+      linear_acceleration_[2] = ((short)DXL_MAKEWORD(data[16*new_value_index+4], data[16*new_value_index+5])) / 256.0 ;
       // angular velocity are two signed bytes with 14.375 per deg/s
-      angular_velocity_[0] = ((short)DXL_MAKEWORD(data[22*new_value_index+6], data[22*new_value_index+7])) / 14.375;
-      angular_velocity_[1] = ((short)DXL_MAKEWORD(data[22*new_value_index+8], data[22*new_value_index+9])) / 14.375;
-      angular_velocity_[2] = ((short)DXL_MAKEWORD(data[22*new_value_index+10], data[22*new_value_index+11])) / 14.375;
+      angular_velocity_[0] = ((short)DXL_MAKEWORD(data[16*new_value_index+6], data[16*new_value_index+7])) / 14.375;
+      angular_velocity_[1] = ((short)DXL_MAKEWORD(data[16*new_value_index+8], data[16*new_value_index+9])) / 14.375;
+      angular_velocity_[2] = ((short)DXL_MAKEWORD(data[16*new_value_index+10], data[16*new_value_index+11])) / 14.375;
 
       return true;
     }else {
       return false;
     }
-
 }
+
+bool DynamixelHardwareInterface::syncWritePosition(){
+  int* goal_position = (int*)malloc(joint_names_.size() * sizeof(int));
+  float radian;
+  for (size_t num = 0; num < joint_names_.size(); num++) {
+    radian = goal_position_[num] - joint_mounting_offsets_[num] - joint_offsets_[num];
+    goal_position[num] = driver_->convertRadian2Value(joint_ids_[num], radian);
+  }
+  driver_->syncWrite("Goal_Position", goal_position);
+  free(goal_position);
+}
+
+bool DynamixelHardwareInterface::syncWriteVelocity() {
+  int* goal_velocity = (int*)malloc(joint_names_.size() * sizeof(int));
+  for (size_t num = 0; num < joint_names_.size(); num++) {
+    goal_velocity[num] = driver_->convertRadian2Value(joint_ids_[num], goal_velocity_[num]);
+  }
+  driver_->syncWrite("Goal_Velocity", goal_velocity);
+  free(goal_velocity);
+}
+
+bool DynamixelHardwareInterface::syncWriteCurrent() {
+  int* goal_current = (int*)malloc(joint_names_.size() * sizeof(int));
+  for (size_t num = 0; num < joint_names_.size(); num++) {
+    goal_current[num] = driver_->convertRadian2Value(joint_ids_[num], goal_effort_[num]);
+  }
+  driver_->syncWrite("Goal_Current", goal_current);
+  free(goal_current);
+}
+
 
 }

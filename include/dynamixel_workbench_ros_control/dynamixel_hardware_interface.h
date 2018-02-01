@@ -66,15 +66,20 @@ private:
   bool stringToControlMode(std::string control_mode_str, ControlMode &control_mode);
   bool switchDynamixelControlMode();
 
+  bool goal_torque_;
+  bool current_torque_;
   void setTorque(bool enabled);
   void setTorque(std_msgs::BoolConstPtr enabled);
 
-  bool syncWriteTorqueEnable(bool torque);
   bool syncReadPositions();
   bool syncReadVelocities();
   bool syncReadEfforts();
   bool syncReadAll();
   bool readImu();
+
+  bool syncWritePosition();
+  bool syncWriteVelocity();
+  bool syncWriteCurrent();
 
   bool first_cycle_;
 
@@ -109,6 +114,7 @@ private:
   std::vector<double> current_effort_;
 
   bool read_imu_;
+    uint32_t last_seq_number_;
    double* orientation_; //quaternion (x,y,z,w)
    double* orientation_covariance_;
   double* angular_velocity_;
