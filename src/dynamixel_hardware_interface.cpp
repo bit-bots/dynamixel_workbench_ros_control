@@ -145,6 +145,7 @@ bool DynamixelHardwareInterface::loadDynamixels(ros::NodeHandle& nh)
     joint_ids_.push_back(uint8_t(motor_id));
     i++;
   }
+  success = true; //todo!!! hack
   if(!success){
     return false;
   }
