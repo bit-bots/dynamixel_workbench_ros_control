@@ -1,0 +1,92 @@
+imu_sensor_controller:
+  type: imu_sensor_controller/ImuSensorController
+  publish_rate: 1000
+
+
+# Publish all joint states -----------------------------------
+# 100Hz is a compromise between fast reaction and CPU load
+joint_state_controller:
+  type: joint_state_controller/JointStateController
+  publish_rate: 1000
+
+TestController:
+  type: position_controllers/JointPositionController
+  joint: No4
+  pid: {p: 50.0, i: 0.00, d: 0.4}
+
+TestController2:
+  type: effort_controllers/JointPositionController
+  joint: HeadPan
+  pid: {p: 50.0, i: 0.00, d: 0.4}
+
+JointGroupController:
+  type: position_controllers/JointGroupPositionController
+  joints:
+      - HeadPan
+      - HeadTilt
+      - LShoulderPitch
+      - LShoulderRoll
+      - LElbow
+      - RShoulderPitch
+      - RShoulderRoll
+      - RElbow
+      - LHipYaw
+      - LHipRoll
+      - LHipPitch
+      - LKnee
+      - LAnklePitch
+      - LAnkleRoll
+      - RHipYaw
+      - RHipRoll
+      - RHipPitch
+      - RKnee
+      - RAnklePitch
+      - RAnkleRoll
+
+TrajectoryController:
+  type: position_controllers/JointTrajectoryController
+  constraints/goal_time: 1.0
+  allow_partial_joints_goal: True
+  joints:
+      - HeadPan
+      - HeadTilt
+      - LShoulderPitch
+      - LShoulderRoll
+      - LElbow
+      - RShoulderPitch
+      - RShoulderRoll
+      - RElbow
+      - LHipYaw
+      - LHipRoll
+      - LHipPitch
+      - LKnee
+      - LAnklePitch
+      - LAnkleRoll
+      - RHipYaw
+      - RHipRoll
+      - RHipPitch
+      - RKnee
+      - RAnklePitch
+      - RAnkleRoll
+  gains:
+    No1:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No2:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No3:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No4:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No5:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No6:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No7:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No8:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No9:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No10:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No11:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No12:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No13:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No14:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No15:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No16:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No17:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No18:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No19:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+    No20:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
+
