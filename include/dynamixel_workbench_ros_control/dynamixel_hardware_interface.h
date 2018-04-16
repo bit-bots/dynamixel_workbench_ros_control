@@ -83,47 +83,47 @@ private:
 
   bool first_cycle_;
 
-  boost::shared_ptr<DynamixelDriver> driver_;
+  boost::shared_ptr<DynamixelDriver> _driver;
 
-  hardware_interface::JointStateInterface jnt_state_interface_;
+  hardware_interface::JointStateInterface _jnt_state_interface;
 
-  hardware_interface::PositionJointInterface jnt_pos_interface_;
-  hardware_interface::VelocityJointInterface jnt_vel_interface_;
-  hardware_interface::EffortJointInterface jnt_eff_interface_;
+  hardware_interface::PositionJointInterface _jnt_pos_interface;
+  hardware_interface::VelocityJointInterface _jnt_vel_interface;
+  hardware_interface::EffortJointInterface _jnt_eff_interface;
 
-  hardware_interface::ImuSensorInterface imu_interface_;
+  hardware_interface::ImuSensorInterface _imu_interface;
 
-  ControlMode control_mode_;
+  ControlMode _control_mode;
 
-  int joint_count_;
+  int _joint_count;
 
-  std::vector<std::string> joint_names_;
-  std::vector<uint8_t> joint_ids_;
-  std::vector<double> joint_mounting_offsets_;
-  std::vector<double> joint_offsets_;
+  std::vector<std::string> _joint_names;
+  std::vector<uint8_t> _joint_ids;
+  std::vector<double> _joint_mounting_offsets;
+  std::vector<double> _joint_offsets;
 
-  std::vector<double> goal_position_;
-  std::vector<double> goal_effort_;
-  std::vector<double> goal_velocity_;
+  std::vector<double> _goal_position;
+  std::vector<double> _goal_effort;
+  std::vector<double> _goal_velocity;
 
-  bool read_position_;
-  bool read_velocity_;
-  bool read_effort_;
-  std::vector<double> current_position_;
-  std::vector<double> current_velocity_;
-  std::vector<double> current_effort_;
+  bool _read_position;
+  bool _read_velocity;
+  bool _read_effort;
+  std::vector<double> _current_position;
+  std::vector<double> _current_velocity;
+  std::vector<double> _current_effort;
 
-  bool read_imu_;
-    uint32_t last_seq_number_;
-   double* orientation_; //quaternion (x,y,z,w)
-   double* orientation_covariance_;
-  double* angular_velocity_;
-   double* angular_velocity_covariance_;
-    double* linear_acceleration_;
-   double* linear_acceleration_covariance_;
+  bool _read_imu;
+    uint32_t _last_seq_number;
+   double* _orientation; //quaternion (x,y,z,w)
+   double* _orientation_covariance;
+  double* _angular_velocity;
+   double* _angular_velocity_covariance;
+    double* _linear_acceleration;
+   double* _linear_acceleration_covariance;
 
   // subscriber
-  ros::Subscriber set_torque_sub_;
+  ros::Subscriber _set_torque_sub;
 };
 }
 
