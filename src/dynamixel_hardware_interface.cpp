@@ -59,7 +59,7 @@ bool DynamixelHardwareInterface::init(ros::NodeHandle& nh)
   {
     registerInterface(&_jnt_eff_interface);
   }
-  setTorque(nh.param("auto_torque", false));
+  setTorque(nh.param("dynamixels/auto_torque", false));
 
   // alloc memory for imu values
   _orientation = (double*) malloc(4 * sizeof(double));
@@ -90,6 +90,10 @@ bool DynamixelHardwareInterface::init(ros::NodeHandle& nh)
 
 bool DynamixelHardwareInterface::loadDynamixels(ros::NodeHandle& nh)
 {
+  /*
+  Load config and try to ping servos to test if everything is correct.
+  Adds all dynamixel to the driver if they are pingable.
+  */
   bool success = true;
 
   ROS_INFO_STREAM("Loading parameters from namespace " << nh.getNamespace() + "/dynamixels");
@@ -145,7 +149,7 @@ bool DynamixelHardwareInterface::loadDynamixels(ros::NodeHandle& nh)
     _joint_ids.push_back(uint8_t(motor_id));
     i++;
   }
-  success = true; //todo!!! hack
+  //success = true; //todo!!! hack
   if(!success){
     return false;
   }

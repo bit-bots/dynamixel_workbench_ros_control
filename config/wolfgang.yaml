@@ -4,7 +4,7 @@ dynamixels:
     baudrate: 2000000
     protocol_version: 2
   control_mode: position
-  auto_torque: true
+  auto_torque: false
   device_info:
     HeadPan:
       id: 1
@@ -69,8 +69,8 @@ dynamixels:
 
   read_values:
     read_position: true
-    read_velocity: true
-    read_effort: true
+    read_velocity: false
+    read_effort: false
 IMU:
   name: IMU
   frame: IMU_frame
