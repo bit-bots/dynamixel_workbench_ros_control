@@ -338,7 +338,6 @@ bool DynamixelHardwareInterface::syncReadEfforts() {
 }
 
 bool DynamixelHardwareInterface::syncReadVoltageAndTemp(){
-  bool success;
   std::vector<uint8_t> data;
   if(_driver->syncReadMultipleRegisters(144, 3, &data)) {
     uint32_t volt;
@@ -358,7 +357,6 @@ bool DynamixelHardwareInterface::syncReadVoltageAndTemp(){
 }
 
 bool DynamixelHardwareInterface::syncReadAll() {
-  bool success;
   std::vector<uint8_t> data;
   if(_driver->syncReadMultipleRegisters(126, 10, &data)) {
     uint32_t eff;
@@ -381,7 +379,6 @@ bool DynamixelHardwareInterface::syncReadAll() {
 }
 
 bool DynamixelHardwareInterface::readImu(){
-    bool success;
     uint8_t *data = (uint8_t *) malloc(110 * sizeof(uint8_t));
 
     if(_driver->readMultipleRegisters(241, 36, 16, data)){
