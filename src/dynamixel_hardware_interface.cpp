@@ -79,7 +79,7 @@ bool DynamixelHardwareInterface::init(ros::NodeHandle& nh)
   std::string imu_frame;
   nh.getParam("IMU/name", imu_name);
   nh.getParam("IMU/frame", imu_frame);
-  nh.getParam("IMU/read", _read_imu);
+  nh.getParam("read_imu", _read_imu);
   hardware_interface::ImuSensorHandle imu_handle(imu_name, imu_frame, _orientation, _orientation_covariance, _angular_velocity, _angular_velocity_covariance, _linear_acceleration, _linear_acceleration_covariance);
   _imu_interface.registerHandle(imu_handle);
   registerInterface(&_imu_interface);
@@ -107,9 +107,9 @@ bool DynamixelHardwareInterface::loadDynamixels(ros::NodeHandle& nh)
   }
 
   // get values to read
-  nh.param("dynamixels/read_values/read_position", _read_position, true);
-  nh.param("dynamixels/read_values/read_velocity", _read_velocity, false);
-  nh.param("dynamixels/read_values/read_effort", _read_effort, false);
+  nh.param("read_position", _read_position, true);
+  nh.param("read_velocity", _read_velocity, false);
+  nh.param("read_effort", _read_effort, false);
 
   // get port info
   std::string port_name;
@@ -183,6 +183,7 @@ void DynamixelHardwareInterface::setTorque(std_msgs::BoolConstPtr enabled)
 
 void DynamixelHardwareInterface::read()
 {
+  // either read all values or a single one, depending on config
   if (_read_position && _read_velocity && _read_effort ){
     if(syncReadAll()){
       for (size_t num = 0; num < _joint_names.size(); num++)
@@ -208,6 +209,17 @@ void DynamixelHardwareInterface::read()
       if (!syncReadEfforts()) {
         ROS_ERROR_THROTTLE(1.0, "Couldn't read current joint effort!");
       }
+    }
+  }
+
+  if (_read_volt_temp){
+    if (_read_VT_counter > _VT_update_rate){
+      if(!syncReadVoltageAndTemp()){
+        ROS_ERROR_THROTTLE(1.0, "Couldn't read current input volatage and temperature!");
+        _read_VT_counter = 0;
+      }
+    }else{
+      _read_VT_counter++;
     }
   }
 
@@ -325,6 +337,26 @@ bool DynamixelHardwareInterface::syncReadEfforts() {
   return success;
 }
 
+bool DynamixelHardwareInterface::syncReadVoltageAndTemp(){
+  bool success;
+  std::vector<uint8_t> data;
+  if(_driver->syncReadMultipleRegisters(144, 3, &data)) {
+    uint32_t volt;
+    uint32_t temp;    
+    for (int i = 0; i < _joint_count; i++) {
+      volt = DXL_MAKEWORD(data[i * 10], data[i * 10 + 1]);
+      temp = data[i * 10 + 2];
+      // convert value to voltage
+      _current_input_voltage[i] = volt * 0.1;
+      // is already in °C
+      _current_temperature[i] = temp;
+    }
+    return true;
+  }else{
+    return false;
+  }
+}
+
 bool DynamixelHardwareInterface::syncReadAll() {
   bool success;
   std::vector<uint8_t> data;
@@ -411,5 +443,13 @@ bool DynamixelHardwareInterface::syncWriteCurrent() {
   free(goal_current);
 }
 
+void DynamixelHardwareInterface::reconf_callback(dynamixel_workbench_ros_control::dynamixel_workbench_ros_control_paramsConfig &config, uint32_t level) {
+  _read_position = config.read_position;
+  _read_velocity = config.read_velocity;
+  _read_effort = config.read_effort;
+  _read_imu = config.read_imu;
+  _read_volt_temp = config.read_volt_temp;
+  _VT_update_rate = config.VT_update_rate;
+}
 
 }

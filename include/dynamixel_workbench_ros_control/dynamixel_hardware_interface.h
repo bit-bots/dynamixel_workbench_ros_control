@@ -11,6 +11,9 @@
 #include <hardware_interface/robot_hw.h>
 #include <transmission_interface/simple_transmission.h>
 #include <transmission_interface/transmission_interface.h>
+#include <dynamic_reconfigure/server.h>
+
+#include <dynamixel_workbench_ros_control/dynamixel_workbench_ros_control_paramsConfig.h>
 
 #include <dynamixel_workbench/dynamixel_driver.h>
 
@@ -56,6 +59,7 @@ class DynamixelHardwareInterface : public hardware_interface::RobotHW
 {
 public:
   DynamixelHardwareInterface();
+  void reconf_callback(dynamixel_workbench_ros_control::dynamixel_workbench_ros_control_paramsConfig &config, uint32_t level);
 
   bool init(ros::NodeHandle& nh);
   void read();
@@ -75,6 +79,7 @@ private:
   bool syncReadVelocities();
   bool syncReadEfforts();
   bool syncReadAll();
+  bool syncReadVoltageAndTemp();
   bool readImu();
 
   bool syncWritePosition();
@@ -109,18 +114,26 @@ private:
   bool _read_position;
   bool _read_velocity;
   bool _read_effort;
+  bool _read_volt_temp;
   std::vector<double> _current_position;
   std::vector<double> _current_velocity;
   std::vector<double> _current_effort;
+  std::vector<double> _current_input_voltage;
+  std::vector<double> _current_temperature;
+
+  int _read_VT_counter;
+  int _VT_update_rate;
+
+
 
   bool _read_imu;
-    uint32_t _last_seq_number;
-   double* _orientation; //quaternion (x,y,z,w)
-   double* _orientation_covariance;
+  uint32_t _last_seq_number;
+  double* _orientation; //quaternion (x,y,z,w)
+  double* _orientation_covariance;
   double* _angular_velocity;
-   double* _angular_velocity_covariance;
-    double* _linear_acceleration;
-   double* _linear_acceleration_covariance;
+  double* _angular_velocity_covariance;
+  double* _linear_acceleration;
+  double* _linear_acceleration_covariance;
 
   // subscriber
   ros::Subscriber _set_torque_sub;

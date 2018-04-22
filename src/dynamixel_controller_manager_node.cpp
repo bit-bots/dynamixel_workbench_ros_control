@@ -1,6 +1,9 @@
 #include <dynamixel_workbench_ros_control/dynamixel_hardware_interface.h>
 #include <ros/callback_queue.h>
 #include <controller_manager/controller_manager.h>
+#include <dynamic_reconfigure/server.h>
+#include <dynamixel_workbench_ros_control/dynamixel_workbench_ros_control_paramsConfig.h>
+
 
 int main(int argc, char** argv)
 {
@@ -9,11 +12,20 @@ int main(int argc, char** argv)
 
   // Load dynamixels
   dynamixel_workbench_ros_control::DynamixelHardwareInterface hw;
+
+
+  // set the dynamic reconfigure and load standard params
+  dynamic_reconfigure::Server<dynamixel_workbench_ros_control::dynamixel_workbench_ros_control_paramsConfig> server;
+  dynamic_reconfigure::Server<dynamixel_workbench_ros_control::dynamixel_workbench_ros_control_paramsConfig>::CallbackType f;
+  f = boost::bind(&dynamixel_workbench_ros_control::DynamixelHardwareInterface::reconf_callback,&hw, _1, _2);
+  server.setCallback(f);
+
   if (!hw.init(pnh))
   {
     ROS_ERROR_STREAM("Failed to initialize hardware interface.");
     return 1;
   }
+
 
   // Create separate queue, because otherwise CM will freeze
   ros::NodeHandle nh;
