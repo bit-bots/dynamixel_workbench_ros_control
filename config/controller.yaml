@@ -16,7 +16,7 @@ TestController:
 
 TestController2:
   type: effort_controllers/JointPositionController
-  joint: HeadPan
+  joint: HeadPan  
   pid: {p: 50.0, i: 0.00, d: 0.4}
 
 JointGroupController:

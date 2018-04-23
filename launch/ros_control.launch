@@ -12,4 +12,9 @@
     </group>
 
     <node pkg="dynamixel_workbench_ros_control" type="dynamixel_controller_manager_node" name="ros_control" output="screen"/> 
+
+    <rosparam file="$(find dynamixel_workbench_ros_control)/config/controller.yaml" command="load" />
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false"
+      output="screen" args="joint_state_controller imu_sensor_controller JointGroupController">
+    </node>
 </launch>

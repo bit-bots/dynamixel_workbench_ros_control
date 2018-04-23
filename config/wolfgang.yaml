@@ -1,7 +1,7 @@
 ros_control:
   read_position: true
-  read_velocity: false
-  read_effort: false
+  read_velocity: true
+  read_effort: true
   read_volt_temp: true
   VT_update_rate: 100
   read_imu: true
@@ -15,68 +15,69 @@ ros_control:
     control_mode: position
     auto_torque: false
     device_info:
-      HeadPan:
+      RShoulderPitch:
         id: 1
-        model_number: 321
+        model_number: 311
         mounting_offset: 0.0
         offset: 0.0
-      HeadTilt:
+      LShoulderPitch:
         id: 2
         model_number: 311
-      LShoulderPitch:
+      RShoulderRoll:
         id: 3
-        model_number: 311
+        model_number: 321
       LShoulderRoll:
         id: 4
         model_number: 311
-      LElbow:
+      RElbow:
         id: 5
-        model_number: 311
-      RShoulderPitch:
+        model_number: 321
+      LElbow:
         id: 6
         model_number: 311
-      RShoulderRoll:
+      RHipYaw:
         id: 7
-        model_number: 311
-      RElbow:
-        id: 8
-        model_number: 311
+        model_number: 321
       LHipYaw:
+        id: 8
+        model_number: 321
+      RHipRoll:
         id: 9
-        model_number: 311
+        model_number: 321
       LHipRoll:
         id: 10
-        model_number: 311
-      LHipPitch:
-        id: 11
-        model_number: 311
-      LKnee:
-        id: 12
-        model_number: 311
-      LAnklePitch:
-        id: 13
-        model_number: 311
-      LAnkleRoll:
-        id: 14
-        model_number: 311
-      RHipYaw:
-        id: 15
-        model_number: 311
-      RHipRoll:
-        id: 16
-        model_number: 311
+        model_number: 321
       RHipPitch:
-        id: 17
-        model_number: 311
+        id: 11
+        model_number: 321
+      LHipPitch:
+        id: 12
+        model_number: 321
       RKnee:
-        id: 18
-        model_number: 311
+        id: 13
+        model_number: 321
+      LKnee:
+        id: 14
+        model_number: 321
       RAnklePitch:
+        id: 15
+        model_number: 321
+      LAnklePitch:
+        id: 16
+        model_number: 321
+      RAnkleRoll:
+        id: 17
+        model_number: 321
+      LAnkleRoll:
+        id: 18
+        model_number: 321
+      HeadPan:
         id: 19
         model_number: 311
-      RAnkleRoll:
+      HeadTilt:
         id: 20
-        model_number: 321
+        model_number: 311
+      
 
   IMU:
     name: IMU

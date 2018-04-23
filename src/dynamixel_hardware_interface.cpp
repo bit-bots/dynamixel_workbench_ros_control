@@ -96,7 +96,7 @@ bool DynamixelHardwareInterface::loadDynamixels(ros::NodeHandle& nh)
   */
   bool success = true;
 
-  ROS_INFO_STREAM("Loading parameters from namespace " << nh.getNamespace() + "/dynamixels");
+  ROS_INFO_STREAM("Loading parameters from namespace " << nh.getNamespace());
 
   // get control mode
   std::string control_mode;
