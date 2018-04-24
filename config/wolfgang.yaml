@@ -13,7 +13,7 @@ ros_control:
       baudrate: 2000000
       protocol_version: 2
     control_mode: position
-    auto_torque: false
+    auto_torque: true
     device_info:
       RShoulderPitch:
         id: 1
