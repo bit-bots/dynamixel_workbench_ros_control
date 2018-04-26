@@ -326,7 +326,7 @@ bool DynamixelHardwareInterface::syncReadVelocities(){
 }
 
 bool DynamixelHardwareInterface::syncReadEfforts() {
-  bool success;
+  bool success; //todo maybe 16bit has to be used in stead, like in the readAll method
   int32_t *data = (int32_t *) malloc(_joint_count * sizeof(int32_t));
   success = _driver->syncRead("Present_Current", data);
   for (int i = 0; i < _joint_count; i++) {
@@ -359,7 +359,7 @@ bool DynamixelHardwareInterface::syncReadVoltageAndTemp(){
 bool DynamixelHardwareInterface::syncReadAll() {
   std::vector<uint8_t> data;
   if(_driver->syncReadMultipleRegisters(126, 10, &data)) {
-    uint32_t eff;
+    int16_t eff;
     uint32_t vel;
     uint32_t pos;
     for (int i = 0; i < _joint_count; i++) {
