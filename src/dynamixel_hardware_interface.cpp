@@ -2,6 +2,8 @@
 #define DXL_MAKEWORD(a, b)  ((uint16_t)(((uint8_t)(((uint64_t)(a)) & 0xff)) | ((uint16_t)((uint8_t)(((uint64_t)(b)) & 0xff))) << 8))
 #define DXL_MAKEDWORD(a, b) ((uint32_t)(((uint16_t)(((uint64_t)(a)) & 0xffff)) | ((uint32_t)((uint16_t)(((uint64_t)(b)) & 0xffff))) << 16))
 
+#define gravity 9.80665
+
 namespace dynamixel_workbench_ros_control
 {
 
@@ -397,13 +399,13 @@ bool DynamixelHardwareInterface::readImu(){
             }
         }
       // linear acceleration are two signed bytes with 256 LSB per g
-      _linear_acceleration[0] = ((short) DXL_MAKEWORD(data[16*new_value_index], data[16*new_value_index+1])) / 256.0 ;
-      _linear_acceleration[1] = ((short) DXL_MAKEWORD(data[16*new_value_index+2], data[16*new_value_index+3])) / 256.0 ;
-      _linear_acceleration[2] = ((short)DXL_MAKEWORD(data[16*new_value_index+4], data[16*new_value_index+5])) / 256.0 ;
+      _linear_acceleration[0] = (((short) DXL_MAKEWORD(data[16*new_value_index], data[16*new_value_index+1])) / 256.0 ) * gravity * -1;
+      _linear_acceleration[1] = (((short) DXL_MAKEWORD(data[16*new_value_index+2], data[16*new_value_index+3])) / 256.0 ) * gravity * -1;
+      _linear_acceleration[2] = (((short)DXL_MAKEWORD(data[16*new_value_index+4], data[16*new_value_index+5])) / 256.0 ) * gravity * -1;
       // angular velocity are two signed bytes with 14.375 per deg/s
-      _angular_velocity[0] = ((short)DXL_MAKEWORD(data[16*new_value_index+6], data[16*new_value_index+7])) / 14.375;
-      _angular_velocity[1] = ((short)DXL_MAKEWORD(data[16*new_value_index+8], data[16*new_value_index+9])) / 14.375;
-      _angular_velocity[2] = ((short)DXL_MAKEWORD(data[16*new_value_index+10], data[16*new_value_index+11])) / 14.375;
+      _angular_velocity[0] = (((short)DXL_MAKEWORD(data[16*new_value_index+6], data[16*new_value_index+7])) / 14.375) * M_PI/180;
+      _angular_velocity[1] = (((short)DXL_MAKEWORD(data[16*new_value_index+8], data[16*new_value_index+9])) / 14.375) * M_PI/180;
+      _angular_velocity[2] = (((short)DXL_MAKEWORD(data[16*new_value_index+10], data[16*new_value_index+11])) / 14.375) * M_PI/180;
 
       return true;
     }else {

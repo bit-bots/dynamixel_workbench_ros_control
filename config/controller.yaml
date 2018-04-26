@@ -135,3 +135,61 @@ TrajectoryController:
     No19:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
     No20:        { p: 50.0, i: 0.00, d: 0.4, i_clamp: 4.0 }
 
+
+TrajectoryControllerEffort:
+  type: effort_controllers/JointTrajectoryController
+  constraints/goal_time: 1.0
+  allow_partial_joints_goal: True
+  joints: 
+    - HeadPan
+    - HeadTilt
+    - LShoulderPitch
+    - LShoulderRoll
+    - LElbow
+    - RShoulderPitch
+    - RShoulderRoll
+    - RElbow
+    - LHipYaw
+    - LHipRoll
+    - LHipPitch
+    - LKnee
+    - LAnklePitch
+    - LAnkleRoll
+    - RHipYaw
+    - RHipRoll
+    - RHipPitch
+    - RKnee
+    - RAnklePitch
+    - RAnkleRoll
+  gains:
+    HeadPan:         { p: 50.0, i: 0.00, d: 1.0, i_clamp: 4.0 }
+    HeadTilt:        { p: 50.0, i: 0.00, d: 1.0, i_clamp: 4.0 }
+    LShoulderPitch:  { p: 50.0, i: 0.00, d: 1.0, i_clamp: 4.0 }
+    LShoulderRoll:   { p: 50.0, i: 0.00, d: 1.0, i_clamp: 4.0 }
+    LElbow:          { p: 50.0, i: 0.00, d: 1.0, i_clamp: 4.0 }
+    RShoulderPitch:  { p: 50.0, i: 0.00, d: 1.0, i_clamp: 4.0 }
+    RShoulderRoll:   { p: 50.0, i: 0.00, d: 1.0, i_clamp: 4.0 }
+    RElbow:          { p: 50.0, i: 0.00, d: 1.0, i_clamp: 4.0 }
+    LHipYaw:         { p: 50.0, i: 0.00, d: 1.0, i_clamp: 4.0 }
+    LHipRoll:        { p: 50.0, i: 0.00, d: 1.0, i_clamp: 4.0 }
+    LHipPitch:       { p: 50.0, i: 0.00, d: 1.0, i_clamp: 4.0 }
+    LKnee:           { p: 50.0, i: 0.00, d: 1.0, i_clamp: 4.0 }
+    LAnklePitch:     { p: 5.0, i: 0.00, d: 0.2, i_clamp: 0.5 }
+    LAnkleRoll:      { p: 5.0, i: 0.00, d: 0.2, i_clamp: 0.5 }
+    RHipYaw:         { p: 50.0, i: 0.00, d: 1.0, i_clamp: 4.0 }
+    RHipRoll:        { p: 50.0, i: 0.00, d: 1.0, i_clamp: 4.0 }
+    RHipPitch:       { p: 50.0, i: 0.00, d: 1.0, i_clamp: 4.0 }
+    RKnee:           { p: 50.0, i: 0.00, d: 1.0, i_clamp: 4.0 }
+    RAnklePitch:     { p: 5.0, i: 0.00, d: 0.2, i_clamp: 0.5 }
+    RAnkleRoll:      { p: 5.0, i: 0.00, d: 0.2, i_clamp: 0.5 } 
+
+
+
+HeadTiltTrajectoryControllerEffort:
+  type: effort_controllers/JointTrajectoryController
+  constraints/goal_time: 1.0
+  allow_partial_joints_goal: True
+  joints: 
+    - HeadTilt
+  gains:
+    HeadTilt:        { p: 50.0, i: 0.00, d: 1.0, i_clamp: 4.0 }

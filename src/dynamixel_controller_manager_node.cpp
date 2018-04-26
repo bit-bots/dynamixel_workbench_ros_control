@@ -38,7 +38,7 @@ int main(int argc, char** argv)
   // Start control loop
   ros::Time current_time = ros::Time::now();
   bool first_update = true;
-  ros::Rate rate(pnh.param("control_loop_hz", 25));
+  ros::Rate rate(pnh.param("control_loop_hz", 200));
 
   while (ros::ok())
   {

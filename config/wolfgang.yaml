@@ -81,4 +81,4 @@ ros_control:
 
   IMU:
     name: IMU
-    frame: IMU_frame                
+    frame: torso                
